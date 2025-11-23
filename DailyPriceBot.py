@@ -134,6 +134,13 @@ def handle_text(message):
         stats = compute_stats(df)
         bot.send_message(chat_id, generate_analysis_with_giga(stats))
         bot.send_message(chat_id, "Что ещё показать?", reply_markup=inline_action_buttons())
+    
+    else:
+        bot.send_message(
+            chat_id,
+            "Кажется, я не понял, что именно вы хотите сделать 🤔",
+            reply_markup=inline_action_buttons()
+        )
 
 
 @bot.callback_query_handler(func=lambda c: True)
