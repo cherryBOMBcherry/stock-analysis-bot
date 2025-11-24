@@ -86,7 +86,7 @@ def handle_text(message):
         bot.send_message(chat_id, f"К сожалению, я не смог понять запрос 🤔\nПопробуйте еще раз!")
         return
     
-    # Извлечь поля
+
     aim = parsed.get('Aim')
     ticker = parsed.get('ticker')
     start_date = parsed.get('start_date')
@@ -132,6 +132,7 @@ def handle_text(message):
 
     elif aim == 'анализ':
         stats = compute_stats(df)
+        bot.send_message(chat_id, 'Краткая аналитическая сводка: \n')
         bot.send_message(chat_id, generate_analysis_with_giga(stats))
         bot.send_message(chat_id, "Что ещё показать?", reply_markup=inline_action_buttons())
     

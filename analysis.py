@@ -63,8 +63,8 @@ def compute_stats(df: pd.DataFrame):
 
         results[ticker] = stats
 
-    if len(results) == 1:
-        return list(results.values())[0]
+    # if len(results) == 1:
+    #     return list(results.values())[0]
 
     return results
 
@@ -98,47 +98,24 @@ def format_stats(stats):
     if not stats:
         return "Нет данных для анализа."
     
-    if len(stats) == 1:
+    mes = []
+    for st in stats.keys():
         formatted_stats = (
-            f"Аналитика по тикеру {stats['ticker']} за указанный период:\n\n"
-            f"Средняя цена закрытия:  {stats['mean_close']:.2f}\n"
-            f"Минимальная цена закрытия:  {stats['min_close']:.2f}\n"
-            f"Максимальная цена закрытия:  {stats['max_close']:.2f}\n"
-            f"Цена на начало периода:  {stats['start_price']:.2f}\n"
-            f"Цена на конец периода:  {stats['end_price']:.2f}\n"
-            f"Изменение цены:  {stats['change_abs']:.2f} ({stats['change_pct']:.2f}%)\n"
-            f"Волатильность:  {stats['volatility']:.4f}\n"
+            f"Стастика по тикеру {stats[st]['ticker']} за указанный период:\n\n"
+            f"Средняя цена закрытия:  {stats[st]['mean_close']:.2f}\n"
+            f"Минимальная цена закрытия:  {stats[st]['min_close']:.2f}\n"
+            f"Максимальная цена закрытия:  {stats[st]['max_close']:.2f}\n"
+            f"Цена на начало периода:  {stats[st]['start_price']:.2f}\n"
+            f"Цена на конец периода:  {stats[st]['end_price']:.2f}\n"
+            f"Изменение цены:  {stats[st]['change_abs']:.2f} ({stats[st]['change_pct']:.2f}%)\n"
+            f"Волатильность:  {stats[st]['volatility']:.4f}\n"
         )
         
-        if stats['change_abs'] > 0:
-            formatted_stats += "\nЦены росли."
-        elif stats['change_abs'] < 0:
-            formatted_stats += "\nЦены упали."
+        if stats[st]['change_abs'] > 0:
+            formatted_stats += "\nЦены росли.\n"
+        elif stats[st]['change_abs'] < 0:
+            formatted_stats += "\nЦены упали.\n"
         else:
-            formatted_stats += "\nЦены остались без изменения."
-
-        return formatted_stats
-        
-    else:
-        mes = []
-        for st in stats.keys():
-            formatted_stats = (
-                f"Аналитика по тикеру {stats[st]['ticker']} за указанный период:\n\n"
-                f"Средняя цена закрытия:  {stats[st]['mean_close']:.2f}\n"
-                f"Минимальная цена закрытия:  {stats[st]['min_close']:.2f}\n"
-                f"Максимальная цена закрытия:  {stats[st]['max_close']:.2f}\n"
-                f"Цена на начало периода:  {stats[st]['start_price']:.2f}\n"
-                f"Цена на конец периода:  {stats[st]['end_price']:.2f}\n"
-                f"Изменение цены:  {stats[st]['change_abs']:.2f} ({stats[st]['change_pct']:.2f}%)\n"
-                f"Волатильность:  {stats[st]['volatility']:.4f}\n"
-                f"\n"
-            )
-            
-            if stats[st]['change_abs'] > 0:
-                formatted_stats += "\nЦены росли."
-            elif stats[st]['change_abs'] < 0:
-                formatted_stats += "\nЦены упали."
-            else:
-                formatted_stats += "\nЦены остались без изменения."
-            mes.append(formatted_stats)
-        return '\n'.join(mes)
+            formatted_stats += "\nЦены остались без изменения.\n"
+        mes.append(formatted_stats)
+    return '\n'.join(mes)

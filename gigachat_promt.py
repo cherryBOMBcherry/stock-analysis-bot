@@ -37,9 +37,6 @@ def parse_user_query_with_giga(parse_prompt_template: str, user_message: str) ->
 # ----------------------------------------------------------
 
 def generate_analysis_with_giga(stats_dict: dict) -> str:
-    """
-    Даёт краткий аналитический вывод по статистике.
-    """
 
     system_prompt = (
         "Ты — финансовый аналитик. Дай краткий вывод по статистике цен "
