@@ -14,5 +14,4 @@ __pycache__/
 config/
 
 # Dataset (if large)
-World-Stock-Prices-Dataset.csv
 stocks.db
