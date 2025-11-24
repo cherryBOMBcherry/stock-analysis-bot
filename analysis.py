@@ -9,6 +9,13 @@ plt.switch_backend('Agg')
 def create_db_engine(database_url):
     return create_engine(database_url, future=True)
 
+def get_available_companies(engine):
+    query = text("SELECT DISTINCT \"Ticker\" FROM stock_data ORDER BY \"Ticker\";")
+    df = pd.read_sql(query, engine)
+    tickers = df['Ticker'].tolist()
+    return tickers
+
+
 def query_prices(engine, tickers=None, start_date=None, end_date=None):
     
     if isinstance(tickers, str):

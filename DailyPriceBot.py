@@ -2,10 +2,12 @@ import json
 import telebot
 from telebot import types
 from config.config import TELEGRAM_TOKEN, DATABASE_URL
-from gigachat_promt import parse_user_query_with_giga, generate_analysis_with_giga
+from gigachat_promt import parse_user_query_with_giga, generate_analysis_with_giga, response_with_giga
 from prompts import PARSE_PROMPT
-from analysis import plot_price_chart, compute_stats, query_prices, format_stats
+from analysis import plot_price_chart, compute_stats, query_prices, format_stats, get_available_companies
 from sqlalchemy import text
+import os
+import random
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 user_context = {}
@@ -16,7 +18,7 @@ user_context = {}
 def main_menu():
     keyboard = types.ReplyKeyboardMarkup(resize_keyboard=True)
     keyboard.add("📈 График", "📊 Статистика")
-    keyboard.add("🔍 Анализ", "❓ Помощь")
+    keyboard.add("🔍 Анализ", "❓ Помощь", "🎭 Мем")
     return keyboard
 
 
@@ -38,8 +40,10 @@ def send_error(chat_id, text):
 
 
 @bot.message_handler(commands=['start', 'help'])
-def send_welcome(chat):
-    text = (f"Привет, {chat.from_user.first_name}!👋\n\n"
+def send_welcome(message):  # ← изменено: теперь принимает message
+    # bot.send_sticker(message.chat.id, "CAACAgIAAxkBAAEMmKtmvKfY7nXQZ7Y6RvW5x9K5X0D4jwACDwADwDZPE6qzh8qWVj6dNgQ")
+
+    text = (f"Привет, {message.from_user.first_name}!👋\n\n"
             "Я бот аналитики акций технологических компаний за 2024 год.\n"
             "\n"
             "Я умею:\n"
@@ -53,8 +57,11 @@ def send_welcome(chat):
             "• Статистика NVDA и MSFT за апрель\n"
             "• Сделай анализ Google за первое полугодие\n"
     )
-    bot.send_message(chat.chat.id, text, reply_markup=main_menu())
+    bot.send_message(message.chat.id, text, reply_markup=main_menu())
 
+@bot.message_handler(func=lambda message: message.text and message.text.strip().lower().startswith('привет'))
+def handle_greeting(message):
+    send_welcome(message)
 
 @bot.message_handler(func=lambda m: True, content_types=['text'])
 def handle_text(message):
@@ -70,6 +77,46 @@ def handle_text(message):
             "• Статистика NVDA за апрель\n"
             "• Анализ Google за год"
         )
+        return
+    
+    def send_help_message(chat_id):
+        companies = get_available_companies(DATABASE_URL)
+        companies_list = "\n".join(f"• {ticker}" for ticker in companies)
+
+        help_text = (
+            "Вот что я умею:\n"
+            "📊 • Строить графики цен акций\n"
+            "🧮 • Считать статистику (среднее, максимум, волатильность и т.д.)\n"
+            "💬 • Давать текстовый анализ на основе данных за 2024 год\n\n"
+            "🏢 Доступны данные по следующим компаниям:\n"
+            f"{companies_list}\n\n"
+            "📋 Примеры запросов:\n"
+            "• График AAPL за март\n"
+            "• Статистика NVDA и MSFT за апрель\n"
+            "• Анализ Google за первое полугодие\n\n"
+            "Жду ваш запрос! 🚀"
+        )
+        bot.send_message(chat_id, help_text, reply_markup=main_menu())    
+    
+    if user_ms == "❓ Помощь":
+        send_help_message(chat_id)
+        return
+    
+    def send_random_meme(chat_id):
+        meme_dir = "memes"
+        meme_files = [f for f in os.listdir(meme_dir) if f.lower().endswith(('.png', '.jpg', '.jpeg'))]
+        random_meme = random.choice(meme_files)
+        meme_path = os.path.join(meme_dir, random_meme)
+
+        try:
+            with open(meme_path, 'rb') as photo:
+                bot.send_photo(chat_id, photo)
+        except Exception as e:
+            bot.send_message(chat_id, "Не удалось отправить мем 😅 Попробуйте ещё раз!")
+            print(f"Ошибка отправки мема: {e}")
+
+    if user_ms == "🎭 Мем":
+        send_random_meme(chat_id)
         return
 
     bot.send_chat_action(chat_id, 'typing')
@@ -99,7 +146,11 @@ def handle_text(message):
     }
 
     if not ticker:
-        send_error(chat_id, "Не удалось определить компанию 🏷️")
+        try:
+            reply = response_with_giga(f"Пользователь спросил: {user_ms}") #но не указан тикер акции.
+            bot.send_message(chat_id, reply)
+        except Exception:
+            send_error(chat_id, "Не удалось определить компанию 🏷️")
         return
 
     try:
@@ -127,7 +178,7 @@ def handle_text(message):
     elif aim == 'статистика':
         stats = compute_stats(df)
         bot.send_message(chat_id, format_stats(stats), parse_mode='html')
-        bot.send_message(chat_id, generate_analysis_with_giga(stats))
+        # bot.send_message(chat_id, generate_analysis_with_giga(stats))
         bot.send_message(chat_id, "Хотите дополнительно?", reply_markup=inline_action_buttons())
 
     elif aim == 'анализ':

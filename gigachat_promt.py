@@ -15,7 +15,6 @@ def _call_giga(system_prompt: str, user_prompt: str, temperature: float = 0.0, m
         max_tokens=max_tokens,
     )
 
-    # verify_ssl_certs=False — если сервер без валидного сертификата (обычно True)
     with GigaChat(credentials=GIGACHAT_CLIENT_SECRET, verify_ssl_certs=False) as giga:
         response = giga.chat(payload)
 
@@ -28,7 +27,7 @@ def _call_giga(system_prompt: str, user_prompt: str, temperature: float = 0.0, m
 def parse_user_query_with_giga(parse_prompt_template: str, user_message: str) -> str:
     user_prompt = f"{parse_prompt_template}\n\nЗапрос пользователя:\n\"\"\"{user_message}\"\"\""
     system_prompt = "Ты — модель, которая строго преобразует пользовательские фразы в JSON по заданным правилам."
-    result = _call_giga(system_prompt=system_prompt, user_prompt=user_prompt, temperature=0.0, max_tokens=400)
+    result = _call_giga(system_prompt=system_prompt, user_prompt=user_prompt, temperature=0.0, max_tokens=500)
     return result
 
 
@@ -56,3 +55,25 @@ def generate_analysis_with_giga(stats_dict: dict) -> str:
     )
 
     return result
+
+# ----------------------------------------------------------
+# 3) Генерация отвлеченного текста
+# ----------------------------------------------------------
+
+def response_with_giga(user_message: str) -> str:
+    user_prompt = f"Сообщение пользователя:\n\"\"\"{user_message}\"\"\""
+    system_prompt = (
+        "Ты — дружелюбный Telegram-бот, который помогает с анализом акций технологических компаний за 2024 год. "
+        "Если сообщение — вежливость (например, 'спасибо', 'привет', 'пока'), отвечай кратко, вежливо и дружелюбно. "
+        "Если сообщение — вопрос о возможностях, напомни, что ты умеешь строить графики, считать статистику и давать аналитику. "
+        "Если сообщение непонятно или не относится к теме, мягко предложи задать вопрос по акциям. "
+        "Ответ должен быть кратким — максимум 2-3 предложения. Не используй разметку, только чистый текст."
+        "Общайся неформально, шути и используй стикеры"
+    )
+    result = _call_giga(
+        system_prompt=system_prompt,
+        user_prompt=user_prompt,
+        temperature=0.5,
+        max_tokens=250  # достаточно для 1-2 предложений
+    )
+    return result.strip()
