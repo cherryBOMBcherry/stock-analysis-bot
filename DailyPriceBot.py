@@ -4,13 +4,14 @@ from telebot import types
 from config.config import TELEGRAM_TOKEN, DATABASE_URL
 from gigachat_promt import parse_user_query_with_giga, generate_analysis_with_giga, response_with_giga
 from prompts import PARSE_PROMPT
-from analysis import plot_price_chart, compute_stats, query_prices, format_stats, get_available_companies
+from analysis import plot_price_chart, compute_stats, query_prices, format_stats, get_available_companies, plot_volatility_chart, plot_returns_histogram
 from sqlalchemy import text
 import os
 import random
 
 bot = telebot.TeleBot(TELEGRAM_TOKEN)
 user_context = {}
+
 # -------------------------------------------------------
 #  Кнопки
 # -------------------------------------------------------
@@ -31,6 +32,15 @@ def inline_action_buttons():
     )
     return kb
 
+def graph_type_buttons():
+    kb = types.InlineKeyboardMarkup()
+    kb.add(
+        types.InlineKeyboardButton("📈 Цена", callback_data="graph_price"),
+        types.InlineKeyboardButton("📊 Доходность", callback_data="graph_return"),
+        types.InlineKeyboardButton("🌀 Волатильность", callback_data="graph_volatility")
+    )
+    return kb
+
 def send_error(chat_id, text):
     bot.send_message(
         chat_id, 
@@ -38,10 +48,12 @@ def send_error(chat_id, text):
         reply_markup=main_menu()
     )
 
+# -------------------------------------------------------
+#  Основные сообщения
+# -------------------------------------------------------
 
 @bot.message_handler(commands=['start', 'help'])
-def send_welcome(message):  # ← изменено: теперь принимает message
-    # bot.send_sticker(message.chat.id, "CAACAgIAAxkBAAEMmKtmvKfY7nXQZ7Y6RvW5x9K5X0D4jwACDwADwDZPE6qzh8qWVj6dNgQ")
+def send_welcome(message):
 
     text = (f"Привет, {message.from_user.first_name}!👋\n\n"
             "Я бот аналитики акций технологических компаний за 2024 год.\n"
@@ -133,7 +145,6 @@ def handle_text(message):
         bot.send_message(chat_id, f"К сожалению, я не смог понять запрос 🤔\nПопробуйте еще раз!")
         return
     
-
     aim = parsed.get('Aim')
     ticker = parsed.get('ticker')
     start_date = parsed.get('start_date')
@@ -164,16 +175,10 @@ def handle_text(message):
         return
 
     if aim == 'график':
-        try:
-            img_buf = plot_price_chart(df)
-            bot.send_photo(chat_id, img_buf)
-        except Exception as e:
-            bot.send_message(chat_id, f"Ошибка построения графика: {e}")
-            return
-
-        stats = compute_stats(df)
-        bot.send_message(chat_id, generate_analysis_with_giga(stats))
-        bot.send_message(chat_id, "Хотите дополнительно?", reply_markup=inline_action_buttons())
+        bot.send_message(chat_id, "Выберите тип графика:", reply_markup=graph_type_buttons())
+        # stats = compute_stats(df)
+        # bot.send_message(chat_id, generate_analysis_with_giga(stats))
+        return 
     
     elif aim == 'статистика':
         stats = compute_stats(df)
@@ -194,6 +199,9 @@ def handle_text(message):
             reply_markup=inline_action_buttons()
         )
 
+# -------------------------------------------------------
+#  Дополнительная аналитика
+# -------------------------------------------------------
 
 @bot.callback_query_handler(func=lambda c: True)
 def callback_handler(call):
@@ -205,21 +213,28 @@ def callback_handler(call):
         bot.send_message(chat_id, "Сначала сделайте запрос: например «График AAPL за апрель»")
         return
     
-
-    if call.data == "want_graph":
-        try:
-            df = query_prices(
-                DATABASE_URL,
-                ctx["tickers"],
-                start_date=ctx["start_date"],
-                end_date=ctx["end_date"]
-            )
+    if call.data in ["graph_price", "graph_return", "graph_volatility"]:
+        df = query_prices(
+            DATABASE_URL,
+            ctx["tickers"],
+            start_date=ctx["start_date"],
+            end_date=ctx["end_date"]
+        )
+        if call.data == "graph_price":
             img_buf = plot_price_chart(df)
-            bot.send_photo(chat_id, img_buf)
+        elif call.data == "graph_return":
+            img_buf = plot_returns_histogram(df)
+        elif call.data == "graph_volatility":
+            img_buf = plot_volatility_chart(df)
 
-        except Exception as e:
-            bot.send_message(chat_id, f"Ошибка построения графика: {e}")
-            return
+        bot.send_photo(chat_id, img_buf)
+        bot.send_message(chat_id, "Хотите ещё что-то?", reply_markup=inline_action_buttons())
+        return
+    
+    elif call.data == "want_graph":
+        # Показываем выбор типа графика, как при первом запросе
+        bot.send_message(chat_id, "Выберите тип графика:", reply_markup=graph_type_buttons())
+        return
 
     elif call.data == "want_stats":
         df = query_prices(
@@ -230,6 +245,7 @@ def callback_handler(call):
         )
         stats = compute_stats(df)
         bot.send_message(chat_id, format_stats(stats), parse_mode='html')
+        bot.send_message(chat_id, "Хотите ещё что-то?", reply_markup=inline_action_buttons())
 
     elif call.data == "want_analysis":
         df = query_prices(
@@ -240,6 +256,7 @@ def callback_handler(call):
         )
         stats = compute_stats(df)
         bot.send_message(chat_id, generate_analysis_with_giga(stats))
+        bot.send_message(chat_id, "Хотите ещё что-то?", reply_markup=inline_action_buttons())
 
 
 bot.polling(none_stop=True)

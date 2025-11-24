@@ -100,6 +100,47 @@ def plot_price_chart(df: pd.DataFrame):
 
     return buf
 
+def plot_volatility_chart(df: pd.DataFrame, window=10):
+    plt.figure(figsize=(12, 6))
+
+    for ticker, group in df.groupby("Ticker"):
+        group = group.sort_values("Date")
+        returns = group["Close"].pct_change()
+        rolling_vol = returns.rolling(window=window).std()
+        plt.plot(group["Date"], rolling_vol, label=f"{ticker} ({window}-дн. волатильность)")
+
+    plt.title("Динамика волатильности акций")
+    plt.xlabel("Дата")
+    plt.ylabel("Стандартное отклонение доходности")
+    plt.grid(True)
+    plt.legend()
+    plt.tight_layout()
+
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close()
+    buf.seek(0)
+    return buf
+
+def plot_returns_histogram(df: pd.DataFrame, bins=30):
+    plt.figure(figsize=(10, 6))
+
+    for ticker, group in df.groupby("Ticker"):
+        returns = group["Close"].pct_change().dropna()
+        plt.hist(returns, bins=bins, alpha=0.6, label=ticker)
+
+    plt.title("Распределение дневных доходностей")
+    plt.xlabel("Доходность (изменение цены за день)")
+    plt.ylabel("Частота")
+    plt.legend()
+    plt.grid(True)
+    plt.tight_layout()
+
+    buf = io.BytesIO()
+    plt.savefig(buf, format="png")
+    plt.close()
+    buf.seek(0)
+    return buf
 
 def format_stats(stats):
     if not stats:
