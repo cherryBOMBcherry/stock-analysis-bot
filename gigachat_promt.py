@@ -43,7 +43,7 @@ def generate_analysis_with_giga(stats_dict: dict) -> str:
 
     system_prompt = (
         "Ты — финансовый аналитик. Дай краткий вывод по статистике цен "
-        "акций за период. Максимум 3–4 предложения. Без списков и сухих данных."
+        "акций за период. Максимум 5-7 предложений. Без списков и сухих данных. Если компаний несколько, сравни их данные между собой"
     )
 
     user_prompt = (
@@ -55,7 +55,7 @@ def generate_analysis_with_giga(stats_dict: dict) -> str:
         system_prompt=system_prompt,
         user_prompt=user_prompt,
         temperature=0.4,
-        max_tokens=300
+        max_tokens=500
     )
 
     return result
