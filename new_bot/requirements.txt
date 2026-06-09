@@ -1,0 +1,6 @@
+pyTelegramBotAPI
+pandas
+matplotlib
+requests
+gigachat
+apimoex
